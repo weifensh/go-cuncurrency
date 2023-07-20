@@ -41,6 +41,7 @@ func fanIn(ctx context.Context, fetchers ...<-chan interface{}) <-chan interface
 				case res := <-f:
 					combinedFetcher <- res
 				case <-ctx.Done():
+					fmt.Println("cancel done.")
 					return
 				}
 			}
@@ -57,9 +58,16 @@ func fanIn(ctx context.Context, fetchers ...<-chan interface{}) <-chan interface
 }
 
 func main() {
-	c := fanIn(context.Background(), boring("a"), boring("b"))
-	for i := 0; i < 5; i++ {
+	ctx, cancel := context.WithCancel(context.Background())
+	c := fanIn(ctx, boring("a"), boring("b"))
+	go func() {
+		time.Sleep(3 * time.Second)
+		cancel()
+		fmt.Println("cancelling.")
+	}()
+	for i := 0; i < 500; i++ {
 		fmt.Println(<-c) // now we can read from 1 channel
 	}
+
 	fmt.Println("You are boring. I'm quit.")
 }
